@@ -1,4 +1,4 @@
-import { Simple, Opaque, Option } from '@glimmer/interfaces';
+import { Simple, Opaque, Option, VMModes } from "@glimmer/interfaces";
 import { PathReference } from '@glimmer/reference';
 import { assign } from '@glimmer/util';
 import {
@@ -21,7 +21,7 @@ export interface RenderOptions {
   parentNode: Simple.Element;
   nextSibling?: Option<Simple.Node>;
   dynamicScope: DynamicScope;
-  mode?: 'rehydrate' | 'serialize';
+  mode: VMModes;
 }
 
 /**
@@ -143,7 +143,7 @@ class ScannableTemplate implements Template<TemplateMeta> {
 
     let entryPoint = this.asEntryPoint();
     let handle = entryPoint.compile();
-    let vm = VM.initial(this.options.program, env, self, dynamicScope, elementBuilder, entryPoint.symbolTable, handle);
+    let vm = VM.initial(this.options.program, env, self, dynamicScope, elementBuilder, entryPoint.symbolTable, handle, mode);
     return new TemplateIterator(vm);
   }
 

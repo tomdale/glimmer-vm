@@ -28,7 +28,7 @@ APPEND_OPCODES.add(Op.DynamicContent, (vm, { op1: isTrusting }) => {
     content = vm.elements().appendCautiousDynamicContent(value);
   }
 
-  if (!isConst(reference)) {
+  if (!isConst(reference) && vm.mode !== 'serialize') {
     vm.updateWith(new UpdateDynamicContentOpcode(reference, content));
   }
 });

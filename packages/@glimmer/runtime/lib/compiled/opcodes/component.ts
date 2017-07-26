@@ -231,7 +231,7 @@ APPEND_OPCODES.add(Op.CreateComponent, (vm, { op1: flags, op2: _state }) => {
 
   let tag = manager.getTag(component);
 
-  if (!isConstTag(tag)) {
+  if (!isConstTag(tag) && vm.mode !== 'serialize') {
     vm.updateWith(new UpdateComponentOpcode(tag, definition.name, component, manager, dynamicScope));
   }
 });
@@ -291,7 +291,7 @@ export class ComponentElementOperations {
 
       let attribute = vm.elements().setDynamicAttribute(name, reference.value(), trusting, namespace);
 
-      if (!isConst(reference)) {
+      if (!isConst(reference) && vm.mode !== 'serialize') {
         vm.updateWith(new UpdateDynamicAttributeOpcode(reference, attribute));
       }
     }
@@ -422,7 +422,9 @@ APPEND_OPCODES.add(Op.DidRenderLayout, (vm, { op1: _state }) => {
 
   vm.env.didCreate(component, manager);
 
-  vm.updateWith(new DidUpdateLayoutOpcode(manager, component, bounds));
+  if (vm.mode !== 'serialize') {
+    vm.updateWith(new DidUpdateLayoutOpcode(manager, component, bounds));
+  }
 });
 
 APPEND_OPCODES.add(Op.CommitComponentTransaction, vm => vm.commitCacheGroup());

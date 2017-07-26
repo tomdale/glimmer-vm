@@ -17,7 +17,7 @@ import {
   Constants,
   ConstantString
 } from '../environment/constants';
-import { ProgramSymbolTable } from "@glimmer/interfaces";
+import { ProgramSymbolTable, VMModes } from "@glimmer/interfaces";
 
 export interface PublicVM {
   env: Environment;
@@ -208,17 +208,18 @@ export default class VM implements PublicVM {
     dynamicScope: DynamicScope,
     elementStack: ElementBuilder,
     symbolTable: ProgramSymbolTable,
-    handle: Handle
+    handle: Handle,
+    mode: VMModes
   ) {
     let scope = Scope.root(self, symbolTable.symbols.length);
-    let vm = new VM(program, env, scope, dynamicScope, elementStack);
+    let vm = new VM(program, env, scope, dynamicScope, elementStack, mode);
     vm.pc = vm.heap.getaddr(handle);
     vm.updatingOpcodeStack.push(new LinkedList<UpdatingOpcode>());
     return vm;
   }
 
-  static resume({ program, env, scope, dynamicScope }: VMState, stack: ElementBuilder) {
-    return new VM(program, env, scope, dynamicScope, stack);
+  static resume({ program, env, scope, dynamicScope, mode }: VMState, stack: ElementBuilder) {
+    return new VM(program, env, scope, dynamicScope, stack, mode);
   }
 
   constructor(
@@ -227,11 +228,10 @@ export default class VM implements PublicVM {
     scope: Scope,
     dynamicScope: DynamicScope,
     private elementStack: ElementBuilder,
+    public mode: VMModes
   ) {
-    this.env = env;
     this.heap = program.heap;
     this.constants = program.constants;
-    this.elementStack = elementStack;
     this.scopeStack.push(scope);
     this.dynamicScopeStack.push(dynamicScope);
   }
@@ -242,7 +242,8 @@ export default class VM implements PublicVM {
       program: this.program,
       dynamicScope: this.dynamicScope(),
       scope: this.scope(),
-      stack: this.stack.capture(args)
+      stack: this.stack.capture(args),
+      mode: this.mode
     };
   }
 

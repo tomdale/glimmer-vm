@@ -140,7 +140,9 @@ APPEND_OPCODES.add(Op.JumpIf, (vm, { op1: target }) => {
       vm.goto(target);
     }
 
-    vm.updateWith(new Assert(cache));
+    if (vm.mode !== 'serialize') {
+      vm.updateWith(new Assert(cache));
+    }
   }
 });
 
@@ -158,7 +160,9 @@ APPEND_OPCODES.add(Op.JumpUnless, (vm, { op1: target }) => {
       vm.goto(target);
     }
 
-    vm.updateWith(new Assert(cache));
+    if (vm.mode !== 'serialize') {
+      vm.updateWith(new Assert(cache));
+    }
   }
 });
 

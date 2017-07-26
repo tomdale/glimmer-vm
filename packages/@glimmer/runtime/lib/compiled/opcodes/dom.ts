@@ -49,7 +49,7 @@ APPEND_OPCODES.add(Op.PushRemoteElement, vm => {
 
   if (isConst(elementRef)) {
     element = elementRef.value();
-  } else {
+  } else if (vm.mode !== 'serialize') {
     let cache = new ReferenceCache(elementRef);
     element = cache.peek();
     vm.updateWith(new Assert(cache));
@@ -57,13 +57,13 @@ APPEND_OPCODES.add(Op.PushRemoteElement, vm => {
 
   if (isConst(nextSiblingRef)) {
     nextSibling = nextSiblingRef.value();
-  } else {
+  } else if (vm.mode !== 'serialize') {
     let cache = new ReferenceCache(nextSiblingRef);
     nextSibling = cache.peek();
     vm.updateWith(new Assert(cache));
   }
 
-  vm.elements().pushRemoteElement(element, nextSibling);
+  vm.elements().pushRemoteElement(element!, nextSibling!);
 });
 
 APPEND_OPCODES.add(Op.PopRemoteElement, vm => vm.elements().popRemoteElement());
@@ -100,7 +100,7 @@ APPEND_OPCODES.add(Op.Modifier, (vm, { op1: specifier }) => {
 
   let tag = manager.getTag(modifier);
 
-  if (!isConstTag(tag)) {
+  if (!isConstTag(tag) && vm.mode !== 'serialize') {
     vm.updateWith(new UpdateModifierOpcode(
       tag,
       manager,
@@ -157,7 +157,7 @@ APPEND_OPCODES.add(Op.DynamicAttr, (vm, { op1: _name, op2: trusting, op3: _names
 
   let attribute = vm.elements().setDynamicAttribute(name, value, !!trusting, namespace);
 
-  if (!isConst(reference)) {
+  if (!isConst(reference) && vm.mode !== 'serialize') {
     vm.updateWith(new UpdateDynamicAttributeOpcode(reference, attribute));
   }
 });
