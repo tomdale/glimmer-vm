@@ -1,6 +1,6 @@
 import { TestEnvironmentRenderDelegate, AbstractRenderTest } from "@glimmer/test-helpers";
 
-let renderTests: AbstractRenderTest;
+let renderTests: AbstractRenderTest<HTMLElement>;
 QUnit.module("Render Tests: buildComponent", {
   beforeEach() {
     renderTests = new AbstractRenderTest(new TestEnvironmentRenderDelegate());

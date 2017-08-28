@@ -1,6 +1,7 @@
 import { AbstractRenderTest, test } from '../abstract-test-case';
+import { Simple } from '@glimmer/interfaces';
 
-export class ShadowingSuite extends AbstractRenderTest {
+export class ShadowingSuite extends AbstractRenderTest<Simple.Element> {
   @test({ kind: 'glimmer' })
   "normal outer attributes are reflected"() {
     this.render({

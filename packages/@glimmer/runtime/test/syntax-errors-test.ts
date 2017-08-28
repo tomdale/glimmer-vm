@@ -1,6 +1,7 @@
 import { AbstractRenderTest, module, test, TestEnvironment } from "@glimmer/test-helpers";
+import { Simple } from '@glimmer/interfaces';
 
-class SyntaxErrors extends AbstractRenderTest {
+class SyntaxErrors extends AbstractRenderTest<Simple.Element> {
   protected env = new TestEnvironment();
 
   @test "context switching using ../ is not allowed"() {

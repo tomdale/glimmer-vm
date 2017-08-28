@@ -1,7 +1,8 @@
 import { AbstractRenderTest, test } from "../abstract-test-case";
 import { classes } from '../environment';
+import { Simple } from "@glimmer/interfaces";
 
-export class EmberishComponentTests extends AbstractRenderTest {
+export class EmberishComponentTests extends AbstractRenderTest<Simple.Element> {
   @test
   "non-block without properties"() {
     this.render({

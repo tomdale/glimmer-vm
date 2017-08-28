@@ -1,6 +1,7 @@
 import { AbstractRenderTest, test } from '../abstract-test-case';
+import { Simple } from "@glimmer/interfaces";
 
-export class FragmentComponents extends AbstractRenderTest {
+export class FragmentComponents extends AbstractRenderTest<Simple.Element> {
   @test({
     kind: "fragment"
   })
@@ -55,7 +56,7 @@ export class FragmentComponents extends AbstractRenderTest {
   }
 }
 
-export class BasicComponents extends AbstractRenderTest {
+export class BasicComponents extends AbstractRenderTest<HTMLElement> {
   @test({
     kind: "basic"
   })

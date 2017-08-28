@@ -337,8 +337,8 @@ class BundlingRenderDelegate implements RenderDelegate {
     this.env = new BundledClientEnvironment();
   }
 
-  getInitialElement(): HTMLElement {
-    return this.env.getAppendOperations().createElement('div') as HTMLElement;
+  getInitialElement<HTMLDivElement extends Simple.Element>(): HTMLDivElement {
+    return this.env.getAppendOperations().createElement('div') as HTMLDivElement;
   }
 
   registerComponent(type: ComponentKind, testType: ComponentKind, name: string, layout: string, Class?: Opaque): void {

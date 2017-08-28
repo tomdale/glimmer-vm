@@ -2,9 +2,9 @@ import { PathReference, Tagged, TagWrapper, RevisionTag, DirtyableTag, Tag } fro
 import { RenderResult, RenderLayoutOptions, TemplateIterator, Environment } from "@glimmer/runtime";
 import { Opaque, Dict, dict, expect } from "@glimmer/util";
 import { NodeDOMTreeConstruction } from "@glimmer/node";
-import { Option } from "@glimmer/interfaces";
+import { Option, Simple } from "@glimmer/interfaces";
 import { UpdatableReference } from "@glimmer/object-reference";
-import { assign, equalTokens, normalizeInnerHTML } from "./helpers";
+import { assign, equalTokens } from "./helpers";
 import { TestEnvironment } from './environment/lazy-env';
 import {
   TestDynamicScope,
@@ -100,18 +100,18 @@ class SimplePathReference implements PathReference<Opaque> {
   }
 }
 
-type IndividualSnapshot = 'up' | 'down' | Node;
+type IndividualSnapshot = 'up' | 'down' | Simple.Node;
 type NodesSnapshot = IndividualSnapshot[];
 
 export interface RenderDelegate {
-  getInitialElement(): HTMLElement;
+  getInitialElement<T extends Simple.Element>(): T;
   registerComponent<K extends ComponentKind, L extends ComponentKind>(type: K, testType: L, name: string, layout: string, Class?: ComponentTypes[K]): void;
   registerHelper(name: string, helper: UserHelper): void;
-  renderTemplate(template: string, context: Dict<Opaque>, element: HTMLElement, snapshot: () => void): RenderResult;
+  renderTemplate(template: string, context: Dict<Opaque>, element: Simple.Element, snapshot: () => void): RenderResult;
 }
 
-export class AbstractRenderTest {
-  protected element: HTMLElement;
+export class AbstractRenderTest<T extends Simple.Element> {
+  element: T;
   protected assert = QUnit.assert;
   protected context: Dict<Opaque> = dict<Opaque>();
   protected renderResult: Option<RenderResult> = null;
@@ -360,24 +360,6 @@ export class AbstractRenderTest {
     return invocation;
   }
 
-  shouldBeVoid(tagName: string) {
-    this.element.innerHTML = "";
-    let html = "<" + tagName + " data-foo='bar'><p>hello</p>";
-    this.delegate.renderTemplate(html, this.context, this.element, () => this.takeSnapshot());
-
-    let tag = '<' + tagName + ' data-foo="bar">';
-    let closing = '</' + tagName + '>';
-    let extra = '<p>hello</p>';
-    html = normalizeInnerHTML(this.element.innerHTML);
-
-    QUnit.assert.pushResult({
-      result: html === tag + extra || html === tag + closing + extra,
-      actual: html,
-      expected: tag + closing + extra,
-      message: tagName + ' should be a void element'
-    });
-  }
-
   render(template: string | ComponentBlueprint, properties: Dict<Opaque> = {}): void {
     if (typeof template === "object") {
       let blueprint = template as ComponentBlueprint;
@@ -412,7 +394,7 @@ export class AbstractRenderTest {
   }
 
   protected takeSnapshot() {
-    let snapshot: (Node | 'up' | 'down')[] = (this.snapshot = []);
+    let snapshot: (Simple.Node | 'up' | 'down')[] = (this.snapshot = []);
 
     let node = this.element.firstChild;
     let upped = false;
@@ -496,8 +478,8 @@ export class TestEnvironmentRenderDelegate implements RenderDelegate {
     this.env = new TestEnvironment();
   }
 
-  getInitialElement(): HTMLElement {
-    return this.env.getAppendOperations().createElement('div') as HTMLElement;
+  getInitialElement<HTMLDivElement extends Simple.Element>(): HTMLDivElement {
+    return this.env.getAppendOperations().createElement('div') as HTMLDivElement;
   }
 
   registerComponent<K extends ComponentKind, L extends ComponentKind>(type: K, _testType: L, name: string, layout: string, Class?: ComponentTypes[K]) {
@@ -567,8 +549,8 @@ export class RehydrationDelegate implements RenderDelegate {
     });
   }
 
-  getInitialElement(): HTMLElement {
-    return this.clientEnv.getAppendOperations().createElement('div') as HTMLElement;
+  getInitialElement<HTMLDivElement extends Simple.Element>(): HTMLDivElement {
+    return this.clientEnv.getAppendOperations().createElement('div') as HTMLDivElement;
   }
 
   renderServerSide(template: string, context: Dict<Opaque>, takeSnapshot: () => void): string {
@@ -625,7 +607,7 @@ export class RehydrationDelegate implements RenderDelegate {
 function normalize(
   oldSnapshot: NodesSnapshot,
   newSnapshot: NodesSnapshot,
-  except: Array<Node>
+  except: Array<Simple.Node>
 ) {
   let oldIterator = new SnapshotIterator(oldSnapshot);
   let newIterator = new SnapshotIterator(newSnapshot);
@@ -701,7 +683,7 @@ function uniq(arr: any[]) {
   }, []);
 }
 
-function isServerMarker(node: Node) {
+function isServerMarker(node: Simple.Node) {
   return (
     node.nodeType === Node.COMMENT_NODE && node.nodeValue!.charAt(0) === '%'
   );
@@ -743,11 +725,11 @@ export interface RenderDelegateConstructor<Delegate extends RenderDelegate> {
   new(): Delegate;
 }
 
-export interface RenderTestConstructor<D extends RenderDelegate, T extends AbstractRenderTest> {
+export interface RenderTestConstructor<D extends RenderDelegate, T extends AbstractRenderTest<Simple.Element>> {
   new(delegate: D): T;
 }
 
-export function module<T extends AbstractRenderTest> (
+export function module<T extends AbstractRenderTest<Simple.Element>> (
   name: string,
   klass: RenderTestConstructor<RenderDelegate, T>,
   options = { componentModule: false }
@@ -755,7 +737,7 @@ export function module<T extends AbstractRenderTest> (
   return rawModule(name, klass, TestEnvironmentRenderDelegate, options);
 }
 
-export function rawModule<D extends RenderDelegate, T extends AbstractRenderTest> (
+export function rawModule<D extends RenderDelegate, T extends AbstractRenderTest<Simple.Element>> (
   name: string,
   klass: RenderTestConstructor<D, T>,
   Delegate: RenderDelegateConstructor<D>,
@@ -784,7 +766,7 @@ interface ComponentTests {
   fragment: Function[];
 }
 
-function componentModule<D extends RenderDelegate, T extends AbstractRenderTest>(name: string, klass: RenderTestConstructor<D, T>, Delegate: RenderDelegateConstructor<D>) {
+function componentModule<D extends RenderDelegate, T extends AbstractRenderTest<Simple.Element>>(name: string, klass: RenderTestConstructor<D, T>, Delegate: RenderDelegateConstructor<D>) {
   let tests: ComponentTests = {
     glimmer: [],
     curly: [],
@@ -880,7 +862,7 @@ function componentModule<D extends RenderDelegate, T extends AbstractRenderTest>
 }
 
 function nestedComponentModules(
-  klass: typeof AbstractRenderTest & Function,
+  klass: RenderTestConstructor<RenderDelegate, AbstractRenderTest<Simple.Element>> & Function,
   tests: ComponentTests
 ): void {
   Object.keys(tests).forEach(type => {
@@ -890,7 +872,7 @@ function nestedComponentModules(
         type
       ].forEach(
         (
-          t: (type: string, klass: typeof AbstractRenderTest & Function) => void
+          t: (type: string, klass: RenderTestConstructor<RenderDelegate, AbstractRenderTest<Simple.Element>> & Function) => void
         ) => t(formattedType, klass)
       );
     });

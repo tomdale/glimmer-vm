@@ -1,6 +1,7 @@
 import { AbstractRenderTest, test } from '../abstract-test-case';
+import { Simple } from "@glimmer/interfaces";
 
-export class HasBlockParamsHelperSuite extends AbstractRenderTest {
+export class HasBlockParamsHelperSuite extends AbstractRenderTest<Simple.Element> {
   @test({ kind: 'curly' })
   "parameterized has-block-params (subexpr, inverse) when inverse supplied without block params"() {
     this.render({

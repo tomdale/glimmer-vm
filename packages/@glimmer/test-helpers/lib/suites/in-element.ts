@@ -3,8 +3,9 @@ import { stripTight } from '../helpers';
 import { equalsElement } from '../environment';
 import { setProperty as set } from '@glimmer/object-reference';
 import { EmberishCurlyComponent } from '../environment/components/emberish-curly';
+import { Simple } from "@glimmer/interfaces";
 
-export class InElementSuite extends AbstractRenderTest {
+export class InElementSuite extends AbstractRenderTest<Simple.Element> {
   @test "Renders curlies into external element"() {
     let externalElement = document.createElement("div");
     this.render("{{#in-element externalElement}}[{{foo}}]{{/in-element}}", { externalElement, foo: "Yippie!" });

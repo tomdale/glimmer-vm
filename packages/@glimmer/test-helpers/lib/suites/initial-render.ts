@@ -1,9 +1,9 @@
 import { test, AbstractRenderTest } from '../abstract-test-case';
-import { strip, assertNodeTagName } from '../helpers';
+import { strip, assertNodeTagName, normalizeInnerHTML } from '../helpers';
 import { SVG_NAMESPACE } from "@glimmer/runtime";
 import { Opaque } from "@glimmer/interfaces";
 
-export class InitialRenderSuite extends AbstractRenderTest {
+export class InitialRenderSuite extends AbstractRenderTest<HTMLElement> {
   name = 'BASE';
   isIe9PropIssues() {
     if (typeof window === undefined) {
@@ -1112,6 +1112,24 @@ export class InitialRenderSuite extends AbstractRenderTest {
     this.render('{{#render-inverse}}Nope{{else}}<div id="test">123</div>{{/render-inverse}}');
     this.assertHTML('<div id="test">123</div>');
     this.assertStableRerender();
+  }
+
+  shouldBeVoid(tagName: string) {
+    this.element.innerHTML = "";
+    let html = "<" + tagName + " data-foo='bar'><p>hello</p>";
+    this.delegate.renderTemplate(html, this.context, this.element, () => this.takeSnapshot());
+
+    let tag = '<' + tagName + ' data-foo="bar">';
+    let closing = '</' + tagName + '>';
+    let extra = '<p>hello</p>';
+    html = normalizeInnerHTML(this.element.innerHTML);
+
+    QUnit.assert.pushResult({
+      result: html === tag + extra || html === tag + closing + extra,
+      actual: html,
+      expected: tag + closing + extra,
+      message: tagName + ' should be a void element'
+    });
   }
 }
 

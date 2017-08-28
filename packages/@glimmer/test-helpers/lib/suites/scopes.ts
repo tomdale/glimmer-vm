@@ -1,7 +1,8 @@
 import { AbstractRenderTest, test } from '../abstract-test-case';
 import { stripTight } from '../helpers';
+import { Simple } from '@glimmer/interfaces';
 
-export class ScopeSuite extends AbstractRenderTest {
+export class ScopeSuite extends AbstractRenderTest<Simple.Element> {
   @test
   "correct scope - conflicting local names"() {
     this.render({

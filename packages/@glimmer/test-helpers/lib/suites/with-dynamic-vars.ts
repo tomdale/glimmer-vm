@@ -1,6 +1,7 @@
 import { AbstractRenderTest, test } from "../abstract-test-case";
+import { Simple } from '@glimmer/interfaces';
 
-export class WithDynamicVarsSuite extends AbstractRenderTest {
+export class WithDynamicVarsSuite extends AbstractRenderTest<Simple.Element> {
   @test
   "Can get and set dynamic variable"() {
     this.render({

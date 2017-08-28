@@ -1,5 +1,5 @@
 import { precompile as rawPrecompile, PrecompileOptions } from "@glimmer/compiler";
-import { Opaque, Option } from "@glimmer/interfaces";
+import { Opaque, Option, Simple } from "@glimmer/interfaces";
 import { Environment } from "@glimmer/runtime";
 import * as WireFormat from '@glimmer/wire-format';
 import { tokenize } from "simple-html-tokenizer";
@@ -122,8 +122,8 @@ declare const QUnit: QUnit & {
   equiv(a: any, b: any): boolean;
 };
 
-export function equalTokens(testFragment: HTMLElement | string, testHTML: HTMLElement | string, message: Option<string> = null) {
-  let fragTokens = generateTokens(testFragment);
+export function equalTokens(testFragment: Simple.Element | string, testHTML: HTMLElement | string, message: Option<string> = null) {
+  let fragTokens = generateTokens(testFragment as HTMLElement);
   let htmlTokens = generateTokens(testHTML);
 
   // let msg = "Expected: " + htmlTokens.html + "; Actual: " + fragTokens.html;

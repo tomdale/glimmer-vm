@@ -1,6 +1,7 @@
 import { AbstractRenderTest, test, module, TestEnvironment } from "@glimmer/test-helpers";
+import { Simple } from '@glimmer/interfaces';
 
-class CompileErrorTests extends AbstractRenderTest {
+class CompileErrorTests extends AbstractRenderTest<Simple.Element> {
   protected env = new TestEnvironment();
 
   @test "A helpful error message is provided for unclosed elements"() {
