@@ -27,7 +27,7 @@ import EagerRuntimeResolver from './runtime-resolver';
 
 import { Modules } from './modules';
 import { TestDynamicScope } from '../../../environment';
-import { WriteOnlyProgram, RuntimeProgram, RuntimeConstants } from '@glimmer/program';
+import { WriteOnlyProgram, RuntimeProgram, RuntimeConstants, Heap } from '@glimmer/program';
 import { WrappedBuilder } from '@glimmer/opcode-compiler';
 import { ProgramSymbolTable, Recast, VMHandle, ComponentCapabilities } from '@glimmer/interfaces';
 import { UpdatableReference } from '@glimmer/object-reference';
@@ -192,7 +192,7 @@ export default class EagerRenderDelegate implements RenderDelegate {
       }
     });
 
-    compiler.compile();
+    let { heap, pool } = compiler.compile();
 
     let handle = compiler.getSpecifierMap().vmHandleBySpecifier.get(spec)! as Recast<number, VMHandle>;
     let { env } = this;
@@ -202,8 +202,8 @@ export default class EagerRenderDelegate implements RenderDelegate {
     let self = new UpdatableReference(context);
     let dynamicScope = new TestDynamicScope();
     let resolver = new EagerRuntimeResolver(compiler.getSpecifierMap(), this.modules, this.specifiersToSymbolTable);
-    let pool = program.constants.toPool();
-    let runtimeProgram = new RuntimeProgram(new RuntimeConstants(resolver, pool), program.heap);
+    let runtimeHeap = new Heap(heap);
+    let runtimeProgram = new RuntimeProgram(new RuntimeConstants(resolver, pool), runtimeHeap);
 
     let vm = LowLevelVM.initial(runtimeProgram, env, self, null, dynamicScope, builder, handle);
     let iterator = new TemplateIterator(vm);
