@@ -33,8 +33,6 @@ export class Heap {
       this.heap = new Uint16Array(0x100000);
       this.table = [];
     }
-    this.heap = serializedHeap ? new Uint16Array(serializedHeap.buffer) : new Uint16Array(0x100000);
-    this.table = serializedHeap ? serializedHeap.table : [];
   }
 
   /**
