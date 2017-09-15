@@ -16,21 +16,13 @@ import {
 import { DOMChanges, DOMTreeConstruction } from './dom/helper';
 import { PublicVM } from './vm/append';
 import { IArguments } from './vm/arguments';
-import { UNDEFINED_REFERENCE, ConditionalReference } from './references';
 import { DynamicAttributeFactory, defaultDynamicAttributes } from './vm/attributes/dynamic';
-import {
-  ModifierManager, Modifier
-} from './modifier/interfaces';
+import { UNDEFINED_REFERENCE, ConditionalReference } from './references';
+import { ModifierManager, Modifier } from './modifier/interfaces';
 import { Component, ComponentManager } from "./internal-interfaces";
 
 export type ScopeBlock = [VMHandle | ICompilableTemplate<BlockSymbolTable>, Scope, BlockSymbolTable];
 export type ScopeSlot = Option<PathReference<Opaque>> | Option<ScopeBlock>;
-
-export interface DynamicScope {
-  get(key: string): PathReference<Opaque>;
-  set(key: string, reference: PathReference<Opaque>): PathReference<Opaque>;
-  child(): DynamicScope;
-}
 
 export class Scope {
   static root(self: PathReference<Opaque>, size = 0) {

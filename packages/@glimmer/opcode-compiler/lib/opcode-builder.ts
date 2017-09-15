@@ -10,7 +10,7 @@ import {
   CompileTimeLazyConstants,
   Primitive,
   CompilableBlock,
-  CompileTimeConstants,
+  Constants,
   CompileTimeProgram,
   ParsedLayout
 } from './interfaces';
@@ -82,7 +82,7 @@ export interface OpcodeBuilderConstructor {
 }
 
 export abstract class OpcodeBuilder<Specifier> {
-  public constants: CompileTimeConstants;
+  public constants: Constants;
 
   private encoder = new InstructionEncoder([]);
   private labelsStack = new Stack<Labels>();

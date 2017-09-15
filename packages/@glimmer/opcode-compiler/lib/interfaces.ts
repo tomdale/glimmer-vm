@@ -40,7 +40,7 @@ export type CompilableBlock = CompilableTemplate<BlockSymbolTable>;
 export interface CompileTimeProgram {
   [key: number]: never;
 
-  constants: CompileTimeConstants;
+  constants: Constants;
   heap: CompileTimeHeap;
 
   opcode(offset: number): Opcode;
@@ -48,18 +48,7 @@ export interface CompileTimeProgram {
 
 export type Primitive = undefined | null | boolean | number | string;
 
-export interface CompileTimeConstants {
-  string(value: string): number;
-  stringArray(strings: string[]): number;
-  array(values: number[]): number;
-  table(t: SymbolTable): number;
-  handle(specifier: Opaque): number;
-  serializable(value: Opaque): number;
-  float(value: number): number;
-  negative(value: number): number;
-}
-
-export interface CompileTimeLazyConstants extends CompileTimeConstants {
+export interface CompileTimeLazyConstants extends Constants {
   other(value: Opaque): number;
 }
 

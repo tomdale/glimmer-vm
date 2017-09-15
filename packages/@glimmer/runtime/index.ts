@@ -44,9 +44,12 @@ export {
   default as Environment,
   DefaultEnvironment,
   Helper,
-  DynamicScope,
   CompilationOptions
 } from './lib/environment';
+
+export {
+  default as DynamicScope
+} from './lib/dynamic-scope';
 
 export {
   PartialDefinition
