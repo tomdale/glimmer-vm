@@ -50,11 +50,8 @@ module.exports = function(_options) {
 
   if (PRODUCTION) {
     matrix = [
-      ['amd', 'es5'],
       ['commonjs', 'es2017'],
-      ['commonjs', 'es5'],
       ['modules', 'es2017'],
-      ['modules', 'es5'],
       ['types']
     ];
   } else {

@@ -61,7 +61,29 @@ module.exports = function buildPackages(es2017, matrix) {
         case 'commonjs':
           return transpileCommonJS(pkgName, target, source);
         case 'modules':
-          return copyESModules(pkgName, target, source);
+          return new Rollup(source, {
+            rollup: {
+              external: id => (/^(@glimmer|simple-html-tokenizer|handlebars|simple-dom)/).test(id),
+              entry: `${pkgName}/index.js`,
+              onwarn(warning) {
+                let { code } = warning;
+                if (
+                  // Suppress known error message caused by TypeScript compiled code with Rollup
+                  // https://github.com/rollup/rollup/wiki/Troubleshooting#this-is-undefined
+                  code === 'THIS_IS_UNDEFINED' ||
+                  // Suppress errors regarding un-used exports. These may be left behind
+                  // after DEBUG stripping and Rollup removed them anyway.
+                  code === 'UNUSED_EXTERNAL_IMPORT'
+                ) {
+                  return;
+                }
+                console.log(`Rollup warning: ${warning.message}`);
+              },
+              dest: `${pkgName}/dist/modules/${target}/${pkgName}.js`,
+              format: 'es',
+              exports: 'named'
+            }
+          });
         case 'types':
           return copyTypes(pkgName, targets.es2017);
         default:
@@ -79,14 +101,6 @@ function copyVerbatim(pkgName) {
 
 function flatten(arr) {
   return arr.reduce((out, cur) => out.concat(cur), []);
-}
-
-function copyESModules(pkgName, target, source) {
-  return funnel(source, {
-    srcDir: pkgName,
-    destDir: `${pkgName}/dist/modules/${target}/`,
-    exclude: ['**/*.d.ts']
-  });
 }
 
 function copyTypes(pkg, source) {

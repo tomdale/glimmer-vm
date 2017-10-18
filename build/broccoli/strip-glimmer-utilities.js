@@ -44,7 +44,7 @@ module.exports = function(jsTree) {
 
   return babel(jsTree, {
     annotation: 'Babel - Strip Glimmer Utilities',
-    sourceMaps: 'inline',
+    sourceMaps: false,
     moduleIds: true,
     getModuleId: nameResolver,
     plugins: [
