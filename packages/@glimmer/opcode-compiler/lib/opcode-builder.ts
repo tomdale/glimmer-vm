@@ -757,9 +757,34 @@ export abstract class OpcodeBuilder<Locator> extends SimpleOpcodeBuilder {
   }
 
   builtInGuardedAppend() {
-    this.dup();
-
     this.startLabels();
+    this._guardedAppend();
+    this.stopLabels();
+  }
+
+  guardedAppend(expression: WireFormat.Expression, trusting: boolean) {
+    this.startLabels();
+    this.pushFrame();
+    this.returnTo('END');
+
+    this.primitive(!!trusting);
+    this.load(Register.t0);
+    this.expr(expression);
+
+    if (this.stdLib) {
+      this.primitive(this.stdLib.guardedAppend as Recast<VMHandle, number>);
+      this.invokeVirtual();
+    } else {
+      this._guardedAppend();
+    }
+
+    this.label('END');
+    this.popFrame();
+    this.stopLabels();
+  }
+
+  _guardedAppend() {
+    this.dup();
 
     this.isComponent();
 
@@ -784,62 +809,6 @@ export abstract class OpcodeBuilder<Locator> extends SimpleOpcodeBuilder {
     this.exit();
 
     this.return();
-    this.stopLabels();
-  }
-
-  guardedAppend(expression: WireFormat.Expression, trusting: boolean) {
-    this.startLabels();
-
-    this.pushFrame();
-
-    this.returnTo('END');
-
-    if (this.stdLib) {
-      this.primitive(!!trusting);
-      this.load(Register.t0);
-      this.expr(expression);
-      this.primitive(this.stdLib.guardedAppend as Recast<VMHandle, number>);
-      this.invokeVirtual();
-    } else {
-
-      this.expr(expression);
-
-      this.dup();
-
-      this.isComponent();
-
-      this.enter(2);
-
-      this.jumpUnless('ELSE');
-
-      this.pushCurriedComponent();
-
-      this.pushDynamicComponentInstance();
-
-      this.invokeComponent(null, null, null, false, null, null);
-
-      this.exit();
-
-      this.return();
-
-      this.label('ELSE');
-
-      this.primitive(!!trusting);
-      this.load(Register.t0);
-
-      this.dynamicContent();
-
-      this.exit();
-
-      this.return();
-    }
-
-    this.label('END');
-
-    this.popFrame();
-
-    this.stopLabels();
-
   }
 
   yield(to: number, params: Option<WireFormat.Core.Params>) {
