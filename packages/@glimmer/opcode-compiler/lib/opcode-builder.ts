@@ -517,6 +517,7 @@ export abstract class OpcodeBuilder<Locator> extends SimpleOpcodeBuilder {
 
   hasBlockParams(to: number) {
     this.getBlock(to);
+    this.destructureBlock();
     this.resolveBlock();
     this.push(Op.HasBlockParams);
   }
@@ -604,6 +605,10 @@ export abstract class OpcodeBuilder<Locator> extends SimpleOpcodeBuilder {
 
   primitiveReference() {
     this.push(Op.PrimitiveReference);
+  }
+
+  blockReference() {
+    this.push(Op.BlockReference);
   }
 
   helper(helper: Locator, params: Option<WireFormat.Core.Params>, hash: Option<WireFormat.Core.Hash>) {
@@ -785,21 +790,21 @@ export abstract class OpcodeBuilder<Locator> extends SimpleOpcodeBuilder {
 
   _guardedAppend() {
     this.dup();
-
     this.isComponent();
 
-    this.enter(2);
+    this.dup(Register.sp, 1);
+    this.isBlock();
 
+    this.enter(3);
+
+    this.jumpIf('BLOCK');
     this.jumpUnless('ELSE');
 
     this.pushCurriedComponent();
-
     this.pushDynamicComponentInstance();
-
     this.invokeComponent(null, null, null, false, null, null);
 
     this.exit();
-
     this.return();
 
     this.label('ELSE');
@@ -807,17 +812,40 @@ export abstract class OpcodeBuilder<Locator> extends SimpleOpcodeBuilder {
     this.dynamicContent();
 
     this.exit();
-
     this.return();
+
+    this.label('BLOCK');
+
+    this.pop();
+    this.compileArgs([], null, null, false);
+    this.dup(Register.sp, 1);
+    this.unwrapBlock();
+    this.invokeBlock();
+
+    this.exit();
+    this.return();
+  }
+
+  invokeBlock() {
+    this.destructureBlock();
+    this.resolveBlock();
+    this.invokeYield();
+    this.popScope();
+    this.popFrame();
+  }
+
+  unwrapBlock() {
+    this.push(Op.UnwrapBlock);
+  }
+
+  destructureBlock() {
+    this.push(Op.DestructureBlock);
   }
 
   yield(to: number, params: Option<WireFormat.Core.Params>) {
     this.compileArgs(params, null, null, false);
     this.getBlock(to);
-    this.resolveBlock();
-    this.invokeYield();
-    this.popScope();
-    this.popFrame();
+    this.invokeBlock();
   }
 
   populateLayout(state: number) {
@@ -917,6 +945,19 @@ export abstract class OpcodeBuilder<Locator> extends SimpleOpcodeBuilder {
           break;
 
         case '@':
+          if (symbol === '@main' && block) {
+            this.pushYieldableBlock(block);
+            this.blockReference();
+            bindings.push({ symbol: i + 1, isBlock: false });
+            continue;
+          }
+          if (symbol === '@else' && inverse) {
+            this.pushYieldableBlock(inverse);
+            this.blockReference();
+            bindings.push({ symbol: i + 1, isBlock: false });
+            continue;
+          }
+
           if (!hash) {
             break;
           }
@@ -993,6 +1034,10 @@ export abstract class OpcodeBuilder<Locator> extends SimpleOpcodeBuilder {
     this.popFrame();
 
     this.stopLabels();
+  }
+
+  isBlock() {
+    this.push(Op.IsBlock);
   }
 
   isComponent() {

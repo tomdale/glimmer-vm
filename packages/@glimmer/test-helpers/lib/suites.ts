@@ -9,5 +9,6 @@ export * from './suites/scopes';
 export * from './suites/shadowing';
 export * from './suites/with-dynamic-vars';
 export * from './suites/yield';
+export * from './suites/blocks';
 export * from './suites/ssr';
 export * from './suites/each';

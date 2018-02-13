@@ -13,7 +13,7 @@ import { CheckNumber, check, CheckInstanceof, CheckOption, CheckBlockSymbolTable
 import { stackAssert } from './assert';
 import { APPEND_OPCODES, UpdatingOpcode } from '../../opcodes';
 import { Scope } from '../../environment';
-import { PrimitiveReference } from '../../references';
+import { PrimitiveReference, BlockReference } from '../../references';
 import { VM, UpdatingVM } from '../../vm';
 import { Arguments } from '../../vm/arguments';
 import { LazyConstants, PrimitiveType } from "@glimmer/program";
@@ -58,6 +58,12 @@ APPEND_OPCODES.add(Op.Primitive, (vm, { op1: primitive }) => {
 APPEND_OPCODES.add(Op.PrimitiveReference, vm => {
   let stack = vm.stack;
   stack.push(PrimitiveReference.create(check(stack.pop(), CheckPrimitive)));
+});
+
+APPEND_OPCODES.add(Op.BlockReference, vm => {
+  let stack = vm.stack;
+  let block = [stack.pop(), stack.pop(), stack.pop()];
+  stack.push(BlockReference.create(block));
 });
 
 APPEND_OPCODES.add(Op.Dup, (vm, { op1: register, op2: offset }) => {
