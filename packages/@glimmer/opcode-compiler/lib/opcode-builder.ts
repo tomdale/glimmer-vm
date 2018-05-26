@@ -510,7 +510,7 @@ export class StdOpcodeBuilder {
     this.push(Op.PushEmptyArgs);
   }
 
-  switch(_opcode: void, callback: (when: When) => void) {
+  switch(callback: (when: When) => void) {
     // Setup the switch DSL
     let clauses: Array<{ match: number; label: string; callback: () => void }> = [];
 
@@ -525,8 +525,9 @@ export class StdOpcodeBuilder {
 
     // Emit the opcodes for the switch
     this.enter(2);
+    this.contentType();
     this.assertSame();
-    this.reifyU32();
+    // this.reifyU32();
 
     this.startLabels();
 
@@ -540,7 +541,7 @@ export class StdOpcodeBuilder {
       let clause = clauses[i];
 
       this.label(clause.label);
-      this.pop(2);
+      this.pop(1);
 
       clause.callback();
 
@@ -559,7 +560,7 @@ export class StdOpcodeBuilder {
   }
 
   stdAppend(trusting: boolean) {
-    this.switch(this.contentType(), when => {
+    this.switch(when => {
       when(ContentType.String, () => {
         if (trusting) {
           this.assertSame();

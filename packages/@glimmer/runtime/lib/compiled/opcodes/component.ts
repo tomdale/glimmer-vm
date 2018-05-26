@@ -31,7 +31,7 @@ import { DynamicScope, ScopeSlot } from '../../environment';
 import { APPEND_OPCODES, UpdatingOpcode } from '../../opcodes';
 import { UpdatingVM, VM } from '../../vm';
 import { Arguments, IArguments, BlockArguments } from '../../vm/arguments';
-import { IsCurriedComponentDefinitionReference, ContentTypeReference } from './content';
+import { IsCurriedComponentDefinitionReference } from './content';
 import { UpdateDynamicAttributeOpcode } from './dom';
 import { Component } from '../../internal-interfaces';
 import { resolveComponent } from '../../component/resolve';
@@ -114,13 +114,6 @@ APPEND_OPCODES.add(Op.IsComponent, vm => {
   let ref = check(stack.pop(), CheckReference);
 
   stack.push(IsCurriedComponentDefinitionReference.create(ref));
-});
-
-APPEND_OPCODES.add(Op.ContentType, vm => {
-  let stack = vm.stack;
-  let ref = check(stack.peek(), CheckReference);
-
-  stack.push(new ContentTypeReference(ref));
 });
 
 APPEND_OPCODES.add(Op.CurryComponent, (vm, { op1: _meta }) => {

@@ -974,6 +974,20 @@ export class InitialRenderSuite extends RenderTest {
   }
 
   @test
+  'Helper function is executed once per helper invocation'() {
+    let count = 0;
+
+    this.registerHelper('testing', ([id]) => {
+      count++;
+      return id;
+    });
+    this.render('<div>{{testing title}}</div>', { title: 'hello' });
+    this.assert.strictEqual(count, 1, 'helper function was invoked once');
+    this.assertHTML('<div>hello</div>');
+    this.assertStableRerender();
+  }
+
+  @test
   'Constant negative numbers can render'() {
     this.registerHelper('testing', ([id]) => id);
     this.render('<div>{{testing -123321}}</div>');

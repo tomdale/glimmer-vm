@@ -215,14 +215,6 @@ APPEND_OPCODES.add(Op.JumpEq, (vm, { op1: target, op2: comparison }) => {
   }
 });
 
-APPEND_OPCODES.add(Op.AssertSame, vm => {
-  let reference = check(vm.stack.peek(), CheckReference);
-
-  if (!isConst(reference)) {
-    vm.updateWith(Assert.initialize(new ReferenceCache(reference)));
-  }
-});
-
 APPEND_OPCODES.add(Op.ToBoolean, vm => {
   let { env, stack } = vm;
   stack.push(env.toConditionalReference(check(stack.pop(), CheckReference)));
