@@ -126,7 +126,7 @@ test('Void elements', function() {
 });
 
 test('Void elements self closing', function() {
-  printEqual('<br />');
+  printEqual('<br/>');
 });
 
 test('Block params', function() {
@@ -134,5 +134,5 @@ test('Block params', function() {
 });
 
 test('Attributes without value', function() {
-  printEqual('<input disabled />');
+  printEqual('<input disabled/>');
 });
