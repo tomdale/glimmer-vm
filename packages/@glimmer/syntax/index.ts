@@ -7,6 +7,7 @@ export {
   ASTPluginEnvironment,
   Syntax,
 } from './lib/parser/tokenizer-event-handlers';
+export { parse } from './lib/parser/parser';
 
 // needed for tests only
 export { default as builders } from './lib/builders';
