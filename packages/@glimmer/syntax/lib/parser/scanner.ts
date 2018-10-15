@@ -1,18 +1,17 @@
 import { SyntaxKind, CharacterCode } from '../types/syntax';
+import { isWhitespace } from '../../../runtime';
+import { isNullOrUndefined } from 'util';
 
-export type ScannerState = () => SyntaxKind | null;
+export type ScannerState = () => SyntaxKind | void;
 
 export function createScanner(initialText: string) {
   let text = initialText;
   let pos = 0;
-  let start = 0;
   let end = initialText.length;
   let token = SyntaxKind.Unknown;
   let tokenValue = '';
-  let tokenPos = 0;
-  let line = 0;
 
-  let state: ScannerState = beforeDataState;
+  let state: ScannerState = BeforeHTMLDataState;
 
   return {
     scan,
@@ -22,109 +21,32 @@ export function createScanner(initialText: string) {
   };
 
   function scan() {
-    console.log('scanning', { pos, end });
-    start = pos;
-    tokenPos = pos;
     tokenValue = '';
 
     while (true) {
-
-      if (pos >= end) {
+      if (pos > end) {
         return (token = SyntaxKind.EndOfFileToken);
       }
 
-      let result = state();
-      if (result) { return result; }
+      let nextToken = state();
+      if (nextToken) { return (token = nextToken); }
     }
   }
 
   function consume() {
-    let char = peek();
-    pos++;
-    return char;
+    return (pos++, text.charAt(pos - 1));
   }
 
   function peek() {
-    return text.charCodeAt(pos);
-  }
-
-  function peekChar() {
     return text.charAt(pos);
   }
 
-  function beforeDataState() {
-    let char = peek();
-
-    if (char === CharacterCode.LessThan) {
-      state = tagOpenState;
-      pos++;
-    } else {
-      state = dataState;
-    }
-
-    return null;
+  function isASCIIAlpha(char: string) {
+    return char.match(/[-A-Za-z]/);
   }
 
-  function consumeHTMLData() {
-    let char;
-    while (char = text.charAt(pos)) {
-      switch (char) {
-        case '<':
-        case '{':
-          return;
-      }
-
-      tokenValue += char;
-      pos++;
-    }
-  }
-
-  function dataState() {
-    consumeHTMLData();
-
-    let char = peek();
-    switch (char) {
-      case CharacterCode.LessThan:
-        state = (pos++, tagOpenState);
-        break;
-      case CharacterCode.OpenBrace:
-        if (text.charAt(pos + 1) === '{') {
-          state = (pos += 2, mustacheOpenState);
-        }
-    }
-
-    return SyntaxKind.HTMLData;
-  }
-
-  function consumeTagName() {
-    let char;
-    while (char = text.charAt(pos)) {
-      if (char.match(/[-A-Za-z]/)) {
-        tokenValue += char;
-        pos++;
-      } else {
-        return;
-      }
-    }
-  }
-
-  function tagOpenState() {
-    consumeTagName();
-
-    let char = peekChar();
-    switch (char) {
-      case '/':
-        state = tagCloseState;
-        return null;
-      case '>':
-        pos++;
-        state = dataState;
-        break;
-      default:
-        throw new Error('Unhandled tag open state: ' + char);
-    }
-
-    return SyntaxKind.TagOpen;
+  function isWhitespace(char: string) {
+    return char === ' ' || char === '\n' || char === '\t' || char === '\r';
   }
 
   function consumeMustacheIdentifier() {
@@ -139,47 +61,173 @@ export function createScanner(initialText: string) {
     }
   }
 
-  function mustacheOpenState() {
-    consumeMustacheIdentifier();
+  function BeforeHTMLDataState() {
+    let char = peek();
 
-    let char = peekChar();
-    if (char === '}') {
-      if (text.charAt(pos+1) === '}') {
-        pos += 2;
-        state = dataState;
-      }
-    } else if (char === ' ') {
-      pos++;
-      state = beforeMustacheArgumentState;
+    if (char === '<') {
+      state = (pos++, TagOpenState);
+    } else if (char === '{' && peek() === '{') {
+      state = (pos++, MustacheOpenState);
     } else {
-      throw new Error(`Unhandled mustache open state: '${char}'`);
+      state = HTMLDataState;
     }
-
-    return SyntaxKind.MustacheOpen;
   }
 
-  function tagCloseState() {
-    pos++;
-    consumeTagName();
-
-    let char = peekChar();
-    switch (char) {
-      case '>':
-        pos++;
-        state = dataState;
-        break;
-      default:
-        throw new Error('Unhandled tag close state: ' + char);
+  function HTMLDataState(): SyntaxKind | void {
+    let char = consume();
+    if (char === '<') {
+      state = TagOpenState;
+      return SyntaxKind.HTMLData;
+    } else if (char === '{' && peek() === '{') {
+      state = (pos++, MustacheOpenState);
+      return SyntaxKind.HTMLData;
+    } else if (tokenValue && char === '') {
+      return SyntaxKind.HTMLData;
+    } else {
+      tokenValue += char;
     }
-
-    return SyntaxKind.TagClose;
   }
 
-  function beforeMustacheArgumentState() {
-    consumeMustacheIdentifier();
-    pos += 2;
-    state = dataState;
+  function TagOpenState() {
+    let char = peek();
 
-    return SyntaxKind.MustacheArgument;
+    if (char === '/') {
+      state = (pos++, EndTagOpenState);
+    } else if (isASCIIAlpha(char)) {
+      token = SyntaxKind.TagOpen;
+      state = TagNameState;
+    } else {
+      throw new Error(`Unsupported tag open character: '${char}'`);
+    }
+  }
+
+  function EndTagOpenState() {
+    let char = peek();
+
+    if (isASCIIAlpha(char)) {
+      token = SyntaxKind.TagClose;
+      state = TagNameState;
+    } else {
+      throw new Error('Malformed closing tag');
+    }
+  }
+
+  function TagNameState(): SyntaxKind | void {
+    let char = consume();
+
+    if (isWhitespace(char)) {
+      state = BeforeAttributeNameState;
+    } else if (char === '/') {
+      state = SelfClosingStartTagState;
+    } else if (char === '>') {
+      state = BeforeHTMLDataState;
+      return token;
+    } else {
+      tokenValue += char;
+    }
+  }
+
+  function SelfClosingStartTagState() {
+  }
+
+  function BeforeAttributeNameState() {
+    let char = peek();
+    if (isWhitespace(char)) {
+      pos++;
+      return;
+    } else if (char === '/' || char === '>') {
+      state = AfterAttributeNameState;
+    } else {
+      state = AttributeNameState;
+    }
+  }
+
+  function AfterAttributeNameState(): SyntaxKind | void {
+    let char = consume();
+
+    if (isWhitespace(char)) {
+      return;
+    } else if (char === '/') {
+      state = SelfClosingStartTagState;
+    } else if (char === '>') {
+      state = BeforeHTMLDataState;
+      return token;
+    } else {
+      throw new Error(`Unhandled AfterAttributeNameState character: '${char}'`);
+    }
+  }
+
+  function AttributeNameState() {
+    throw new Error('Unhandled attribute name');
+  }
+
+  function MustacheOpenState() {
+    let char = peek();
+
+    if (char === '/') {
+      state = (pos++, EndMustacheOpenState);
+    } else if (isASCIIAlpha(char)) {
+      token = SyntaxKind.MustacheOpen;
+      state = MustacheNameState;
+    } else {
+      throw new Error(`Unsupported mustache open character: '${char}'`);
+    }
+  }
+
+  function MustacheNameState(): SyntaxKind | void {
+    let char = consume();
+
+    if (isWhitespace(char)) {
+      state = BeforeMustacheArgumentNameState;
+      return token;
+    } else if (char === '}' && peek() === '}') {
+      state = (pos++, BeforeHTMLDataState);
+      return token;
+    } else {
+      tokenValue += char;
+    }
+  }
+
+  function EndMustacheOpenState() {
+  }
+
+  function BeforeMustacheArgumentNameState() {
+    let char = peek();
+
+    if (isWhitespace(char)) {
+      pos++;
+      return;
+    } else if (char === '}' && peek() === '}') {
+      state = AfterMustacheArgumentNameState;
+    } else {
+      token = SyntaxKind.MustacheArgument;
+      state = MustacheArgumentNameState;
+    }
+  }
+
+  function MustacheArgumentNameState() {
+    let char = peek();
+
+    if (isWhitespace(char)) {
+      state = (pos++, AfterMustacheArgumentNameState);
+      return token;
+    } else if (char === '}' && peek() === '}') {
+      state = AfterMustacheArgumentNameState;
+      return token;
+    } else {
+      tokenValue += (pos++, char);
+    }
+  }
+
+  function AfterMustacheArgumentNameState() {
+    let char = consume();
+
+    if (isWhitespace(char)) {
+      return;
+    } else if (char === '}' && peek() === '}') {
+      state = (pos++, BeforeHTMLDataState);
+    } else {
+      throw new Error(`Unhandled AfterMustacheArgumentNameState character: '${char}'`);
+    }
   }
 }
