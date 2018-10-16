@@ -1,4 +1,4 @@
-import { createScanner, SyntaxKind as S } from '..';
+import { createScanner, ScannerError, ScannerFlag, SyntaxKind as S } from '..';
 
 const test = QUnit.test;
 
@@ -13,33 +13,54 @@ function tokenize(source: string) {
   while ((token = scanner.scan()) !== S.EndOfFileToken) {
     count++;
     if (count > 1000) { throw new Error("Infinite loop detected"); }
-    tokens.push({ token, value: scanner.getTokenValue() });
+    tokens.push({ token, value: scanner.getTokenValue(), flags: scanner.getTokenFlags() });
+    let error = scanner.getTokenError();
+
+    if (error) {
+      tokens[tokens.length - 1]['error'] = error;
+    }
   }
 
   return tokens;
 }
 
 function data(content: string) {
-  return { token: S.HTMLData, value: content };
+  return { token: S.HTMLData, value: content, flags: 0 };
 }
 
-function tagOpen(tagName: string) {
-  return { token: S.TagOpen, value: tagName };
+function tagOpen(value: string, flags = 0) {
+  return { token: S.TagOpen, value, flags };
+}
+
+function tagSelfClose() {
+  return { token: S.TagSelfClose, value: '', flags: 0 };
 }
 
 function tagClose(tagName: string) {
-  return { token: S.TagClose, value: tagName };
+  return { token: S.TagClose, value: tagName, flags: 0 };
 }
 
 function mustacheOpen(tagName: string) {
-  return { token: S.MustacheOpen, value: tagName };
+  return { token: S.MustacheOpen, value: tagName, flags: 0 };
 }
 
 function mustacheArgument(argName: string) {
-  return { token: S.MustacheArgument, value: argName };
+  return { token: S.MustacheArgument, value: argName, flags: 0 };
 }
 
-test('simple content', function(assert) {
+function attributeName(name: string) {
+  return { token: S.AttributeName, value: name, flags: 0 };
+}
+
+function attributeValue(name: string) {
+  return { token: S.AttributeValue, value: name, flags: 0 };
+}
+
+function withError(entry: {}, error: ScannerError) {
+  return { ...entry, error };
+}
+
+test('simple content', function (assert) {
   let tokens = tokenize('some content');
 
   assert.deepEqual(tokens, [data('some content')]);
@@ -74,140 +95,162 @@ test('A pair of hyphenated tags', assert => {
   assert.deepEqual(tokens, [tagOpen('x-foo'), tagClose('x-foo')]);
 });
 
-test('an HTML element', function(assert) {
+test('an HTML element', function (assert) {
   let tokens = tokenize('some <div>content</div>');
 
   assert.deepEqual(tokens, [data('some '), tagOpen('div'), data('content'), tagClose('div')]);
 });
 
-test('a simple mustache', function(assert) {
+test('a simple mustache', function (assert) {
   let tokens = tokenize('some {{content}}');
 
   assert.deepEqual(tokens, [data('some '), mustacheOpen('content')]);
 });
 
-test('a simple mustache with arguments', function(assert) {
+test('a simple mustache with arguments', function (assert) {
   let tokens = tokenize('some {{content foo}}');
 
   assert.deepEqual(tokens, [data('some '), mustacheOpen('content'), mustacheArgument('foo')]);
 });
 
-// QUnit.test('A tag with a single-quoted attribute', function(assert) {
-//   let tokens = tokenize("<div id='foo'>");
-//   assert.deepEqual(tokens, [startTag('div', [['id', 'foo', true]])]);
-// });
+test('a tag with a single-quoted attribute', function (assert) {
+  let tokens = tokenize("<div id='foo'>");
+  assert.deepEqual(tokens, [tagOpen('div'), attributeName('id'), attributeValue('foo')]);
+});
 
-// QUnit.test('A tag with a double-quoted attribute', function(assert) {
-//   let tokens = tokenize('<div id="foo">');
-//   assert.deepEqual(tokens, [startTag('div', [['id', 'foo', true]])]);
-// });
+QUnit.test('A tag with a double-quoted attribute', function (assert) {
+  let tokens = tokenize('<div id="foo">');
+  assert.deepEqual(tokens, [tagOpen('div'), attributeName('id'), attributeValue('foo')]);
+});
 
-// QUnit.test('A tag with a double-quoted empty', function(assert) {
-//   let tokens = tokenize('<div id="">');
-//   assert.deepEqual(tokens, [startTag('div', [['id', '', true]])]);
-// });
+QUnit.test('A tag with a double-quoted empty', function (assert) {
+  let tokens = tokenize('<div id="">');
+  assert.deepEqual(tokens, [tagOpen('div'), attributeName('id'), attributeValue('')]);
+});
 
-// QUnit.test('A tag with unquoted attribute', function(assert) {
-//   let tokens = tokenize('<div id=foo>');
-//   assert.deepEqual(tokens, [startTag('div', [['id', 'foo', false]])]);
-// });
+QUnit.test('A tag with unquoted attribute', function (assert) {
+  let tokens = tokenize('<div id=foo>');
+  assert.deepEqual(tokens, [tagOpen('div'), attributeName('id'), attributeValue('foo')]);
+});
 
-// QUnit.test('A tag with valueless attributes', function(assert) {
-//   let tokens = tokenize('<div foo bar>');
-//   assert.deepEqual(tokens, [
-//     startTag('div', [['foo', '', false], ['bar', '', false]])
-//   ]);
-// });
+QUnit.test('A tag with valueless attributes', function (assert) {
+  let tokens = tokenize('<div foo bar>');
+  assert.deepEqual(tokens, [
+    tagOpen('div'),
+    attributeName('foo'),
+    attributeName('bar')
+  ]);
+});
 
-// QUnit.test('Missing attribute name', function(assert) {
-//   let tokens = tokenize('<div =foo>');
-//   assert.deepEqual(tokens, [
-//     withSyntaxError(
-//       'attribute name cannot start with equals sign',
-//       startTag('div', [['=foo', '', false]])
-//     )
-//   ]);
-// });
+QUnit.test('Missing attribute name', function (assert) {
+  let tokens = tokenize('<div =foo>');
+  assert.deepEqual(tokens, [
+    tagOpen('div'),
+    withError(
+      attributeName('=foo'),
+      ScannerError.UnexpectedEqualsSignBeforeAttributeName
+    )
+  ]);
+});
 
-// QUnit.test('Invalid character in attribute name', function(assert) {
-//   let tokens = tokenize('<div ">');
-//   assert.deepEqual(tokens, [
-//     withSyntaxError(
-//       '" is not a valid character within attribute names',
-//       startTag('div', [['"', '', false]])
-//     )
-//   ]);
-// });
+QUnit.test('Invalid character in attribute name', function (assert) {
+  let tokens = tokenize('<div ">');
+  assert.deepEqual(tokens, [
+    tagOpen('div'),
+    withError(
+      attributeName('"'),
+      ScannerError.UnexpectedCharacterInAttributeName,
+    ),
+  ]);
+});
 
-// QUnit.test('A tag with multiple attributes', function(assert) {
-//   let tokens = tokenize('<div id=foo class="bar baz" href=\'bat\'>');
-//   assert.deepEqual(tokens, [
-//     startTag('div', [
-//       ['id', 'foo', false],
-//       ['class', 'bar baz', true],
-//       ['href', 'bat', true]
-//     ])
-//   ]);
-// });
+QUnit.test('A tag with multiple attributes', function (assert) {
+  let tokens = tokenize('<div id=foo class="bar baz" href=\'bat\'>');
+  assert.deepEqual(tokens, [
+    tagOpen('div'),
+    attributeName('id'),
+    attributeValue('foo'),
+    attributeName('class'),
+    attributeValue('bar baz'),
+    attributeName('href'),
+    attributeValue('bat')
+  ]);
+});
 
-// QUnit.test('A tag with capitalization in attributes', function(assert) {
-//   let tokens = tokenize('<svg viewBox="0 0 0 0">');
-//   assert.deepEqual(tokens, [startTag('svg', [['viewBox', '0 0 0 0', true]])]);
-// });
+QUnit.test('A tag with capitalization in attributes', function (assert) {
+  let tokens = tokenize('<svg viewBox="0 0 0 0">');
+  assert.deepEqual(tokens, [tagOpen('svg'), attributeName('viewBox'), attributeValue('0 0 0 0')]);
+});
 
-// QUnit.test('A tag with capitalization in the tag', function(assert) {
-//   let tokens = tokenize('<linearGradient>');
-//   assert.deepEqual(tokens, [startTag('linearGradient', [])]);
-// });
+QUnit.test('A tag with capitalization in the tag', function (assert) {
+  let tokens = tokenize('<linearGradient>');
+  assert.deepEqual(tokens, [tagOpen('linearGradient')]);
+});
 
-// QUnit.test('A self-closing tag', function(assert) {
-//   let tokens = tokenize('<img />');
-//   assert.deepEqual(tokens, [startTag('img', [], true)]);
-// });
+QUnit.test('A self-closing tag', function (assert) {
+  let tokens = tokenize('<img />');
+  assert.deepEqual(tokens, [tagOpen('img'), tagSelfClose()]);
+});
 
-// QUnit.test(
-//   'A self-closing tag with valueless attributes (regression)',
-//   function(assert) {
-//     let tokens = tokenize('<input disabled />');
-//     assert.deepEqual(tokens, [
-//       startTag('input', [['disabled', '', false]], true)
-//     ]);
-//   }
-// );
+test(
+  'A self-closing tag with valueless attributes',
+  assert => {
+    let tokens = tokenize('<input disabled />');
+    assert.deepEqual(tokens, [
+      tagOpen('input'),
+      attributeName('disabled'),
+      tagSelfClose()
+    ]);
+  }
+);
 
-// QUnit.test(
-//   'A self-closing tag with valueless attributes without space before closing (regression)',
-//   function(assert) {
-//     let tokens = tokenize('<input disabled/>');
-//     assert.deepEqual(tokens, [
-//       startTag('input', [['disabled', '', false]], true)
-//     ]);
-//   }
-// );
+test(
+  'A self-closing tag with valueless attributes without space before closing',
+  assert => {
+    let tokens = tokenize('<input disabled/>');
+    assert.deepEqual(tokens, [
+      tagOpen('input'),
+      attributeName('disabled'),
+      tagSelfClose(),
+    ]);
+  }
+);
 
-// QUnit.test(
-//   'A self-closing tag with an attribute with unquoted value without space before closing (regression)',
-//   function(assert) {
-//     let tokens = tokenize('<input data-foo=bar/>');
-//     assert.deepEqual(tokens, [
-//       startTag('input', [['data-foo', 'bar', false]], true)
-//     ]);
-//   }
-// );
+test(
+  'A self-closing tag with an attribute with unquoted value without space before closing (spec divergence)',
+  assert => {
+    let tokens = tokenize('<input data-foo=bar/>');
+    assert.deepEqual(tokens, [
+      tagOpen('input'),
+      attributeName('data-foo'),
+      attributeValue('bar'),
+      tagSelfClose()
+    ]);
+  }
+);
 
-// QUnit.test('A tag with a / in the middle', function(assert) {
-//   let tokens = tokenize('<img / src="foo.png">');
-//   assert.deepEqual(tokens, [startTag('img', [['src', 'foo.png', true]])]);
-// });
+test('A tag with a / in the middle', assert => {
+  let tokens = tokenize('<img / src="foo.png">');
+  assert.deepEqual(tokens, [
+    tagOpen('img'),
+    withError(attributeName('src'), ScannerError.UnexpectedSolidusInTag),
+    attributeValue('foo.png')
+  ]);
+});
 
-// QUnit.test('An opening and closing tag with some content', function(assert) {
-//   let tokens = tokenize("<div id='foo' class='{{bar}} baz'>Some content</div>");
-//   assert.deepEqual(tokens, [
-//     startTag('div', [['id', 'foo', true], ['class', '{{bar}} baz', true]]),
-//     chars('Some content'),
-//     endTag('div')
-//   ]);
-// });
+test('An opening and closing tag with some content', assert => {
+  let tokens = tokenize("<div id='foo' class='{{bar}} baz'>Some content</div>");
+  assert.deepEqual(tokens, [
+    tagOpen('div'),
+    attributeName('id'),
+    attributeValue('foo'),
+    attributeName('class'),
+    mustacheOpen('bar'),
+    attributeValue(' baz'),
+    data('Some content'),
+    tagClose('div'),
+  ]);
+});
 
 // QUnit.test('A comment', function(assert) {
 //   let tokens = tokenize('<!-- hello -->');

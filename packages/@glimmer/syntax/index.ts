@@ -30,5 +30,5 @@ import * as AST from './lib/types/nodes';
 export { AST };
 export { isLiteral, printLiteral } from './lib/utils';
 
-export { createScanner } from './lib/parser/scanner';
+export { createScanner, ScannerError, ScannerFlag } from './lib/parser/scanner';
 export { SyntaxKind } from './lib/types/syntax';

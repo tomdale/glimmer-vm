@@ -1,9 +1,12 @@
-export const enum SyntaxKind {
-  Unknown,
+export enum SyntaxKind {
+  Unknown = 1,
   EndOfFileToken,
   HTMLData,
   TagOpen,
+  TagSelfClose,
   TagClose,
+  AttributeName,
+  AttributeValue,
   MustacheOpen,
   MustacheClose,
   MustacheArgument,
